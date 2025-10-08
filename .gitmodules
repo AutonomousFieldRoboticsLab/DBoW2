@@ -1,0 +1,3 @@
+[submodule "3rdparty/brisk"]
+	path = 3rdparty/brisk
+	url = https://github.com/ethz-mrl/brisk.git
