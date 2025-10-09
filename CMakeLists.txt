@@ -58,6 +58,16 @@ if(BUILD_Demo)
   file(COPY demo/images DESTINATION ${CMAKE_BINARY_DIR}/)
 endif(BUILD_Demo)
 
+# Add BRISK training executable
+add_executable(trainBRISK src/trainBRISK.cpp)
+target_link_libraries(trainBRISK ${PROJECT_NAME} ${OpenCV_LIBS} brisk)
+target_include_directories(trainBRISK PRIVATE 
+  include/DBoW2/ 
+  include/
+  3rdparty/brisk/include
+  ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/brisk/include)
+set_target_properties(trainBRISK PROPERTIES CXX_STANDARD 11)
+
 configure_file(src/DBoW2.cmake.in
   "${PROJECT_BINARY_DIR}/DBoW2Config.cmake" @ONLY)
 

@@ -56,6 +56,7 @@ namespace DBoW2
 #include "QueryResults.h"
 #include "FBrief.h"
 #include "FORB.h"
+#include "FBRISK.h"
 
 /// ORB Vocabulary
 typedef DBoW2::TemplatedVocabulary<DBoW2::FORB::TDescriptor, DBoW2::FORB> 
@@ -72,6 +73,14 @@ typedef DBoW2::TemplatedVocabulary<DBoW2::FBrief::TDescriptor, DBoW2::FBrief>
 /// BRIEF Database
 typedef DBoW2::TemplatedDatabase<DBoW2::FBrief::TDescriptor, DBoW2::FBrief> 
   BriefDatabase;
+
+/// BRISK Vocabulary
+typedef DBoW2::TemplatedVocabulary<DBoW2::FBRISK::TDescriptor, DBoW2::FBRISK> 
+  BriskVocabulary;
+
+/// BRISK Database
+typedef DBoW2::TemplatedDatabase<DBoW2::FBRISK::TDescriptor, DBoW2::FBRISK> 
+  BriskDatabase;
 
 #endif
 
