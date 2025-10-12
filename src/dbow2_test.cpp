@@ -1,6 +1,6 @@
 /**
- * @file dbow2_trainbrisk.cpp
- * @brief Training application for BRISK descriptors with DBoW2
+ * @file dbow2_test.cpp
+ * @brief Testing/generating DBoW2 vocabulary.
  *
  * License: BSD, see https://github.com/dorian3d/DBoW2/blob/master/LICENSE.txt
  * @author Dorian Galvez-Lopez
@@ -10,36 +10,30 @@
 
 #include <iostream>
 #include <vector>
-#include <sstream>
 
 // DBoW2
-#include "DBoW2.h" // defines core DBoW2 types
-#include "DBoW2/FBRISK.h"
+#include <DBoW2/DBoW2.h> // defines Surf64Vocabulary and Surf64Database
+#include <DBoW2/FBrisk.hpp>
+
+#include <boost/filesystem.hpp>
 
 // OpenCV
 #include <opencv2/core.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/features2d.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 // BRISK
 #include <brisk/brisk.h>
 
-// Boost filesystem (used below for directory iteration)
-#include <boost/filesystem.hpp>
-
 using namespace DBoW2;
+//using namespace DUtils;
 using namespace std;
 
-// Output filenames (can be overridden via CLI)
-static std::string g_vocab_file = "small_voc.yml.gz";
-static std::string g_db_file    = "small_db.yml.gz";
-
-// \brief BRISK vocabulary.
-typedef DBoW2::TemplatedVocabulary<DBoW2::FBRISK::TDescriptor, DBoW2::FBRISK>
+/// \brief BRISK vocabulary.
+typedef DBoW2::TemplatedVocabulary<DBoW2::FBrisk::TDescriptor, DBoW2::FBrisk>
   FBriskVocabulary;
 
 /// \brief BRISK database.
-typedef DBoW2::TemplatedDatabase<DBoW2::FBRISK::TDescriptor, DBoW2::FBRISK>
+typedef DBoW2::TemplatedDatabase<DBoW2::FBrisk::TDescriptor, DBoW2::FBrisk>
   FBriskDatabase;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -63,38 +57,31 @@ void testVocCreation(const vector<vector<vector<unsigned char> > > &features);
 /// \param features Features.
 void testDatabase(const vector<vector<vector<unsigned char> > > &features);
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-// Number of images to use; will be set from dataset-folder at runtime
-int NIMAGES = 0;
-const int TESTIMAGES = 4; ///< number of test images
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+const int NIMAGES = 4; ///< number of training images
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+
+// ----------------------------------------------------------------------------
+
 /// \brief Main
 /// \param argc argc.
 /// \param argv argv.
 int main(int argc, char **argv)
 {
-  if (argc < 2 || argc > 3) {
-    std::cout << "Usage: ./" << argv[0] << " <dataset-folder> [base-name]" << std::endl;
+
+  if (argc != 2) {
+    std::cout << "Usage: ./" << argv[0] << " dataset-folder";
     return -1;
   }
 
   std::string path(argv[1]);
 
-  // Optional base name (no extension) for output files
-  if (argc == 3) {
-    const std::string base = argv[2];
-    g_vocab_file = base + "_voc.yml.gz";
-    g_db_file    = base + "_db.yml.gz";
-  }
-
   vector<vector<vector<unsigned char> > > features;
   loadFeatures(path, features);
-
-  // Set NIMAGES from the number of loaded images
-  NIMAGES = static_cast<int>(features.size());
-  std::cout << "Loaded " << NIMAGES << " images from '" << path << "'" << std::endl;
 
   testVocCreation(features);
 
@@ -108,7 +95,7 @@ int main(int argc, char **argv)
 void loadFeatures(const string &path, vector<vector<vector<unsigned char> > > &features)
 {
   features.clear();
-  // Reserve capacity after counting files below
+  features.reserve(NIMAGES);
 
   brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator> briskDetector(36, 0, 100,700);
   brisk::BriskDescriptorExtractor briskDescriptorExtractor(false, false);
@@ -118,8 +105,6 @@ void loadFeatures(const string &path, vector<vector<vector<unsigned char> > > &f
           boost::filesystem::directory_iterator(),
           static_cast<bool(*)(const boost::filesystem::path&)>(
                           boost::filesystem::is_regular_file)));
-  // Reserve based on actual number of files
-  features.reserve(cnt);
   cout << "Extracting BRISK features from " << cnt << " images..." << endl;
   int ctr = 0;
   for (auto it = boost::filesystem::directory_iterator(path);
@@ -162,10 +147,9 @@ void changeStructure(const cv::Mat& mat, vector<vector<unsigned char> > &out,
 
 void testVocCreation(const vector<vector<vector<unsigned char> > > &features)
 {
-  // branching factor and depth levels 
-  // Total no. of words = k^L = 10^6 = 1 million
-  const int k = 10; // 9
-  const int L = 6; // 3
+  // branching factor and depth levels
+  const int k = 9;
+  const int L = 3;
   const WeightingType weight = TF_IDF;
   const ScoringType score = L1_NORM;
 
@@ -181,7 +165,7 @@ void testVocCreation(const vector<vector<vector<unsigned char> > > &features)
   // lets do something with this vocabulary
   cout << "Matching images against themselves (0 low, 1 high): " << endl;
   BowVector v1, v2;
-  for(size_t i = 0; i < TESTIMAGES; i++)
+  for(size_t i = 0; i < NIMAGES; i++)
   {
     voc.transform(features[i], v1);
     for(size_t j = 0; j < NIMAGES; j++)
@@ -194,8 +178,8 @@ void testVocCreation(const vector<vector<vector<unsigned char> > > &features)
   }
 
   // save the vocabulary to disk
-  cout << endl << "Saving vocabulary to '" << g_vocab_file << "'..." << endl;
-  voc.save(g_vocab_file);
+  cout << endl << "Saving vocabulary..." << endl;
+  voc.save("small_voc.yml.gz");
   cout << "Done" << endl;
 }
 
@@ -206,7 +190,7 @@ void testDatabase(const vector<vector<vector<unsigned char> > > &features)
   cout << "Creating a small database..." << endl;
 
   // load the vocabulary from disk
-  FBriskVocabulary voc(g_vocab_file);
+  FBriskVocabulary voc("small_voc.yml.gz");
 
   FBriskDatabase db(voc, false, 0); // false = do not use direct index
   // (so ignore the last param)
@@ -215,7 +199,7 @@ void testDatabase(const vector<vector<vector<unsigned char> > > &features)
   // db creates a copy of the vocabulary, we may get rid of "voc" now
 
   // add images to the database
-  for(size_t i = 0; i < TESTIMAGES; i++)
+  for(size_t i = 0; i < NIMAGES; i++)
   {
     db.add(features[i]);
   }
@@ -228,7 +212,7 @@ void testDatabase(const vector<vector<vector<unsigned char> > > &features)
   cout << "Querying the database: " << endl;
 
   QueryResults ret;
-  for(size_t i = 0; i < TESTIMAGES; i++)
+  for(size_t i = 0; i < NIMAGES; i++)
   {
     db.query(features[i], ret, 4);
 
@@ -242,15 +226,16 @@ void testDatabase(const vector<vector<vector<unsigned char> > > &features)
 
   // we can save the database. The created file includes the vocabulary
   // and the entries added
-  cout << "Saving database to '" << g_db_file << "'..." << endl;
-  db.save(g_db_file);
+  cout << "Saving database..." << endl;
+  db.save("small_db.yml.gz");
   cout << "... done!" << endl;
 
   // once saved, we can load it again
   cout << "Retrieving database once again..." << endl;
-  FBriskDatabase db2(g_db_file);
+  FBriskDatabase db2("small_db.yml.gz");
   cout << "... done! This is: " << endl << db2 << endl;
 }
 
 // ----------------------------------------------------------------------------
+
 

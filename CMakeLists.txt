@@ -60,7 +60,8 @@ endif(BUILD_Demo)
 
 # Add BRISK training executable
 add_executable(trainBRISK src/trainBRISK.cpp)
-target_link_libraries(trainBRISK ${PROJECT_NAME} ${OpenCV_LIBS} brisk)
+find_package(Boost COMPONENTS filesystem system REQUIRED)
+target_link_libraries(trainBRISK ${PROJECT_NAME} ${OpenCV_LIBS} brisk Boost::filesystem Boost::system)
 target_include_directories(trainBRISK PRIVATE 
   include/DBoW2/ 
   include/
