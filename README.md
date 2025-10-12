@@ -73,3 +73,82 @@ The `F` parameter is the name of a class that implements the functions defined i
 ### Predefined Vocabularies and Databases
 
 To make it easier to use, DBoW2 defines two kinds of vocabularies and databases: `OrbVocabulary`, `OrbDatabase`, `BriefVocabulary`, `BriefDatabase`. Please, check the demo application to see how they are created and used.
+
+### Usage
+
+#### 1) Clone (with submodules)
+
+```bash
+git clone --recurse-submodules https://github.com/AutonomousFieldRoboticsLab/DBoW2.git
+cd DBoW2
+```
+
+If you already cloned without submodules:
+
+```bash
+git submodule update --init --recursive
+```
+
+#### 2) Install dependencies (Ubuntu/Debian)
+
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential cmake libopencv-dev libboost-filesystem-dev
+```
+
+OpenCV (>= 3.x/4.x) and Boost.Filesystem are required. The BRISK library is included as a submodule and will be built automatically.
+
+#### 3) Build
+
+```bash
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+```
+
+This produces:
+- `libDBoW2.so` – the DBoW2 shared library
+- `trainBRISK` – a training utility using BRISK features (3rdparty BRISK)
+- `dbow2_demo` – the original small demo using ORB
+
+#### 4) Train a vocabulary with BRISK
+
+Usage:
+
+```bash
+./trainBRISK <dataset-folder> [base-name]
+```
+
+- `<dataset-folder>`: path containing your images (top-level, non-recursive)
+- `[base-name]` (optional): base name for output files
+  - Vocabulary: `<base-name>_voc.yml.gz`
+  - Database:   `<base-name>_db.yml.gz`
+  - If omitted, defaults are: `small_voc.yml.gz` and `small_db.yml.gz`
+
+Examples:
+
+```bash
+# Use the bundled sample images and write demo_voc.yml.gz / demo_db.yml.gz
+./trainBRISK ../demo/images demo
+
+# Train on your dataset and use a custom name
+./trainBRISK /media/cmb/T71/singularity_data/dataset/DBOW2/Pamir2 Pamir2
+```
+
+Output files are written to the current working directory (typically `build/`).
+
+Notes:
+- The tool computes a vocabulary (k=9/10, L=3/6 depending on current config) and prints
+  a small similarity matrix for the first few images.
+- The small database is saved and reloaded to validate persistence.
+
+#### Troubleshooting
+
+- Missing submodules: `git submodule update --init --recursive`
+- OpenCV not found: install `libopencv-dev` (or provide a custom OpenCV via CMake variables)
+- Boost.Filesystem link errors: install `libboost-filesystem-dev`
+- Clean rebuild:
+
+```bash
+rm -rf build && mkdir build && cd build && cmake .. && make -j$(nproc)
+```
