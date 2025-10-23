@@ -152,3 +152,14 @@ Notes:
 ```bash
 rm -rf build && mkdir build && cd build && cmake .. && make -j$(nproc)
 ```
+
+#### Load vocabulary and database
+```bash
+cd DBOW2/build
+./loadbrisk <vvocabulary_file>
+```
+For more detailed verbose
+```bash
+cd DBOW2/build
+./fastLoadBrisk <vocabulary_file>
+```
