@@ -65,9 +65,12 @@ void testDatabase(const vector<vector<vector<unsigned char> > > &features);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Number of images to use; will be set from dataset-folder at runtime
-int NIMAGES = 0;
-const int TESTIMAGES = 4; ///< number of test images
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+const int NIMAGES = 4; ///< number of training images
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+const int TESTIMAGES = 5; ///< number of test images
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 /// \brief Main
@@ -93,7 +96,8 @@ int main(int argc, char **argv)
   loadFeatures(path, features);
 
   // Set NIMAGES from the number of loaded images
-  NIMAGES = static_cast<int>(features.size());
+  // NIMAGES = static_cast<int>(features.size());
+  // NIMAGES = 5000;
   std::cout << "Loaded " << NIMAGES << " images from '" << path << "'" << std::endl;
 
   testVocCreation(features);
@@ -108,6 +112,7 @@ int main(int argc, char **argv)
 void loadFeatures(const string &path, vector<vector<vector<unsigned char> > > &features)
 {
   features.clear();
+  features.reserve(NIMAGES);
   // Reserve capacity after counting files below
 
   brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator> briskDetector(36, 0, 100,700);
@@ -118,8 +123,7 @@ void loadFeatures(const string &path, vector<vector<vector<unsigned char> > > &f
           boost::filesystem::directory_iterator(),
           static_cast<bool(*)(const boost::filesystem::path&)>(
                           boost::filesystem::is_regular_file)));
-  // Reserve based on actual number of files
-  features.reserve(cnt);
+
   cout << "Extracting BRISK features from " << cnt << " images..." << endl;
   int ctr = 0;
   for (auto it = boost::filesystem::directory_iterator(path);
@@ -128,12 +132,16 @@ void loadFeatures(const string &path, vector<vector<vector<unsigned char> > > &f
       std::cout << "\r " << int(double(ctr)/double(cnt)*100.0) << "%, processing "
                 << it->path().filename().string();
       cv::Mat image = cv::imread(path + "/" + it->path().filename().string(), cv::IMREAD_GRAYSCALE);
+      
+      // Keypoints and descriptors
       vector<cv::KeyPoint> keypoints;
       cv::Mat descriptors;
 
+      // Load keypoints and descriptors
       briskDetector.detect(image,keypoints);
       briskDescriptorExtractor.compute(image,keypoints,descriptors);
 
+      // 
       features.push_back(vector<vector<unsigned char> >());
       changeStructure(descriptors, features.back(), 48);
 
@@ -164,8 +172,8 @@ void testVocCreation(const vector<vector<vector<unsigned char> > > &features)
 {
   // branching factor and depth levels 
   // Total no. of words = k^L = 10^6 = 1 million
-  const int k = 10; // 9
-  const int L = 6; // 3
+  const int k = 8; // 9
+  const int L = 3; // 3
   const WeightingType weight = TF_IDF;
   const ScoringType score = L1_NORM;
 
@@ -208,6 +216,7 @@ void testDatabase(const vector<vector<vector<unsigned char> > > &features)
   // load the vocabulary from disk
   FBriskVocabulary voc(g_vocab_file);
 
+  // Create a copy of vocabulary into database
   FBriskDatabase db(voc, false, 0); // false = do not use direct index
   // (so ignore the last param)
   // The direct index is useful if we want to retrieve the features that

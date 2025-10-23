@@ -1246,77 +1246,62 @@ void TemplatedDatabase<TDescriptor, F>::load(const std::string &filename)
 template<class TDescriptor, class F>
 void TemplatedDatabase<TDescriptor, F>::load(const cv::FileStorage &fs,
   const std::string &name)
-{ 
+{
   // load voc first
   // subclasses must instantiate m_voc before calling this ::load
   if(!m_voc) m_voc = new TemplatedVocabulary<TDescriptor, F>;
-  
+
   m_voc->load(fs);
 
   // load database now
-  clear(); // resizes inverted file 
-    
+  clear(); // resizes inverted file
+
   cv::FileNode fdb = fs[name];
-  
-  m_nentries = (int)fdb["nEntries"]; 
+
+  m_nentries = (int)fdb["nEntries"];
   m_use_di = (int)fdb["usingDI"] != 0;
   m_dilevels = (int)fdb["diLevels"];
-  
+
   cv::FileNode fn = fdb["invertedIndex"];
-  for(WordId wid = 0; wid < fn.size(); ++wid)
+  WordId wid = 0;
+  for (cv::FileNodeIterator fit = fn.begin(); fit != fn.end(); ++fit, ++wid)
   {
-    cv::FileNode fw = fn[wid];
-    
-    for(unsigned int i = 0; i < fw.size(); ++i)
+    cv::FileNode fw = *fit;
+    for (cv::FileNodeIterator fwit = fw.begin(); fwit != fw.end(); ++fwit)
     {
-      EntryId eid = (int)fw[i]["imageId"];
-      WordValue v = fw[i]["weight"];
-      
+      EntryId eid = (int)(*fwit)["imageId"];
+      WordValue v = (*fwit)["weight"];
       m_ifile[wid].push_back(IFPair(eid, v));
     }
   }
-  
-  if(m_use_di)
+
+  if (m_use_di)
   {
     fn = fdb["directIndex"];
-    
     m_dfile.resize(fn.size());
     assert(m_nentries == (int)fn.size());
-    
-    FeatureVector::iterator dit;
-    for(EntryId eid = 0; eid < fn.size(); ++eid)
+
+    EntryId eid = 0;
+    for (cv::FileNodeIterator fit = fn.begin(); fit != fn.end(); ++fit, ++eid)
     {
-      cv::FileNode fe = fn[eid];
-      
+      cv::FileNode fe = *fit;
       m_dfile[eid].clear();
-      for(unsigned int i = 0; i < fe.size(); ++i)
+      for (cv::FileNodeIterator feit = fe.begin(); feit != fe.end(); ++feit)
       {
-        NodeId nid = (int)fe[i]["nodeId"];
-        
-        dit = m_dfile[eid].insert(m_dfile[eid].end(), 
-          make_pair(nid, std::vector<unsigned int>() ));
-        
-        // this failed to compile with some opencv versions (2.3.1)
-        //fe[i]["features"] >> dit->second;
-        
-        // this was ok until OpenCV 2.4.1
-        //std::vector<int> aux;
-        //fe[i]["features"] >> aux; // OpenCV < 2.4.1
-        //dit->second.resize(aux.size());
-        //std::copy(aux.begin(), aux.end(), dit->second.begin());
-        
-        cv::FileNode ff = fe[i]["features"][0];
+        NodeId nid = (int)(*feit)["nodeId"];
+        FeatureVector::iterator dit = m_dfile[eid].insert(m_dfile[eid].end(),
+          make_pair(nid, std::vector<unsigned int>()));
+
+        cv::FileNode ff = (*feit)["features"][0];
         dit->second.reserve(ff.size());
-                
-        cv::FileNodeIterator ffit;
-        for(ffit = ff.begin(); ffit != ff.end(); ++ffit)
+        for (cv::FileNodeIterator ffit = ff.begin(); ffit != ff.end(); ++ffit)
         {
-          dit->second.push_back((int)*ffit); 
+          dit->second.push_back((int)*ffit);
         }
       }
-    } // for each entry
-  } // if use_id
-  
+    }
+  }
+
 }
 
 // --------------------------------------------------------------------------

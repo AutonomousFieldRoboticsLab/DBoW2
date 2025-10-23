@@ -69,6 +69,29 @@ target_include_directories(trainBRISK PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/brisk/include)
 set_target_properties(trainBRISK PROPERTIES CXX_STANDARD 11)
 
+
+# Add BRISK loading executable
+add_executable(loadBRISK src/loadBRISK.cpp)
+find_package(Boost COMPONENTS filesystem system REQUIRED)
+target_link_libraries(loadBRISK ${PROJECT_NAME} ${OpenCV_LIBS} brisk Boost::filesystem Boost::system)
+target_include_directories(loadBRISK PRIVATE 
+  include/DBoW2/ 
+  include/
+  3rdparty/brisk/include
+  ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/brisk/include)
+set_target_properties(loadBRISK PROPERTIES CXX_STANDARD 11)
+
+# Add fast vocabulary inspector (uses iterator-based FileNode access)
+add_executable(fastLoadBRISK src/fastLoadBRISK.cpp)
+target_link_libraries(fastLoadBRISK ${PROJECT_NAME} ${OpenCV_LIBS} brisk)
+target_include_directories(fastLoadBRISK PRIVATE 
+  include/DBoW2/ 
+  include/
+  3rdparty/brisk/include
+  ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/brisk/include)
+set_target_properties(fastLoadBRISK PROPERTIES CXX_STANDARD 11)
+
+
 configure_file(src/DBoW2.cmake.in
   "${PROJECT_BINARY_DIR}/DBoW2Config.cmake" @ONLY)
 

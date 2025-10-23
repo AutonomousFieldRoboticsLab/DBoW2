@@ -1467,37 +1467,39 @@ void TemplatedVocabulary<TDescriptor,F>::load(const cv::FileStorage &fs,
   
   createScoringObject();
 
-  // nodes
+  // nodes (use iterator-based traversal to avoid O(n^2) access in OpenCV FileStorage)
   cv::FileNode fn = fvoc["nodes"];
 
   m_nodes.resize(fn.size() + 1); // +1 to include root
   m_nodes[0].id = 0;
 
-  for(unsigned int i = 0; i < fn.size(); ++i)
+  for(cv::FileNodeIterator it = fn.begin(); it != fn.end(); ++it)
   {
-    NodeId nid = (int)fn[i]["nodeId"];
-    NodeId pid = (int)fn[i]["parentId"];
-    WordValue weight = (WordValue)fn[i]["weight"];
-    std::string d = (std::string)fn[i]["descriptor"];
-    
+    const cv::FileNode &n = *it;
+    NodeId nid = (int)n["nodeId"];
+    NodeId pid = (int)n["parentId"];
+    WordValue weight = (WordValue)n["weight"];
+    std::string d = (std::string)n["descriptor"];
+
     m_nodes[nid].id = nid;
     m_nodes[nid].parent = pid;
     m_nodes[nid].weight = weight;
     m_nodes[pid].children.push_back(nid);
-    
+
     F::fromString(m_nodes[nid].descriptor, d);
   }
   
-  // words
+  // words (use iterator-based traversal to avoid O(n^2))
   fn = fvoc["words"];
-  
+
   m_words.resize(fn.size());
 
-  for(unsigned int i = 0; i < fn.size(); ++i)
+  for(cv::FileNodeIterator it = fn.begin(); it != fn.end(); ++it)
   {
-    NodeId wid = (int)fn[i]["wordId"];
-    NodeId nid = (int)fn[i]["nodeId"];
-    
+    const cv::FileNode &w = *it;
+    NodeId wid = (int)w["wordId"];
+    NodeId nid = (int)w["nodeId"];
+
     m_nodes[nid].word_id = wid;
     m_words[wid] = &m_nodes[nid];
   }
