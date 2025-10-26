@@ -34,7 +34,7 @@ using namespace std;
 static std::string g_vocab_file = "small_voc.yml.gz";
 static std::string g_db_file    = "small_db.yml.gz";
 
-// \brief BRISK vocabulary.
+/// \brief BRISK vocabulary.
 typedef DBoW2::TemplatedVocabulary<DBoW2::FBRISK::TDescriptor, DBoW2::FBRISK>
   FBriskVocabulary;
 
@@ -46,7 +46,8 @@ typedef DBoW2::TemplatedDatabase<DBoW2::FBRISK::TDescriptor, DBoW2::FBRISK>
 /// \brief Load features from path.
 /// \param path Path.
 /// @param[out] features The loaded features.
-void loadFeatures(const string &path, vector<vector<vector<unsigned char> > > &features);
+/// @param downsampling_factor Downsampling factor.
+void loadFeatures(const string &path, vector<vector<vector<unsigned char> > > &features, int downsampling_factor);
 
 /// \brief Convert data structure.
 /// \param mat cv::Mat format.
@@ -67,10 +68,10 @@ void testDatabase(const vector<vector<vector<unsigned char> > > &features);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-const int NIMAGES = 4; ///< number of training images
+const int NIMAGES = 1000; ///< number of training images
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-const int TESTIMAGES = 5; ///< number of test images
+const int TESTIMAGES = 4; ///< number of test images
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 /// \brief Main
@@ -78,27 +79,34 @@ const int TESTIMAGES = 5; ///< number of test images
 /// \param argv argv.
 int main(int argc, char **argv)
 {
-  if (argc < 2 || argc > 3) {
-    std::cout << "Usage: ./" << argv[0] << " <dataset-folder> [base-name]" << std::endl;
+  if (argc < 2 || argc > 4) {
+    std::cout << "Usage: ./" << argv[0] << " <dataset-folder> [downsampling-factor] [base-name]" << std::endl;
     return -1;
   }
 
   std::string path(argv[1]);
+  int downsampling_factor = 1;
+
+  // Optional downsampling factor
+  if (argc >= 3) {
+    downsampling_factor = std::stoi(argv[2]);
+    if (downsampling_factor < 1) {
+      std::cout << "Downsampling factor must be >= 1 and be integer" << std::endl;
+      return -1;
+    }
+  }
 
   // Optional base name (no extension) for output files
-  if (argc == 3) {
-    const std::string base = argv[2];
+  if (argc == 4) {
+    const std::string base = argv[3];
     g_vocab_file = base + "_voc.yml.gz";
     g_db_file    = base + "_db.yml.gz";
   }
 
   vector<vector<vector<unsigned char> > > features;
-  loadFeatures(path, features);
+  loadFeatures(path, features, downsampling_factor);
 
-  // Set NIMAGES from the number of loaded images
-  // NIMAGES = static_cast<int>(features.size());
-  // NIMAGES = 5000;
-  std::cout << "Loaded " << NIMAGES << " images from '" << path << "'" << std::endl;
+  std::cout << "Loaded " << features.size() << " images from '" << path << "'" << std::endl;
 
   testVocCreation(features);
 
@@ -109,28 +117,37 @@ int main(int argc, char **argv)
 
 // ----------------------------------------------------------------------------
 
-void loadFeatures(const string &path, vector<vector<vector<unsigned char> > > &features)
+void loadFeatures(const string &path, vector<vector<vector<unsigned char> > > &features, int downsampling_factor)
 {
   features.clear();
   features.reserve(NIMAGES);
   // Reserve capacity after counting files below
 
-  brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator> briskDetector(36, 0, 100,700);
-  brisk::BriskDescriptorExtractor briskDescriptorExtractor(false, false);
+  // brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator> briskDetector(36, 0, 100,700);
+  // brisk::BriskDescriptorExtractor briskDescriptorExtractor(false, false);
 
-  size_t cnt = size_t(std::count_if(
+  brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator> briskDetector(36, 2, 100,700); // set scale space layers to  2*2
+  brisk::BriskDescriptorExtractor briskDescriptorExtractor(true, true); // enable rotation and scale invariance
+
+  // First count total images
+  size_t total_images = size_t(std::count_if(
           boost::filesystem::directory_iterator(path),
           boost::filesystem::directory_iterator(),
           static_cast<bool(*)(const boost::filesystem::path&)>(
                           boost::filesystem::is_regular_file)));
 
-  cout << "Extracting BRISK features from " << cnt << " images..." << endl;
+  size_t cnt = (total_images + downsampling_factor - 1) / downsampling_factor; // Ceiling division
+  cout << "Found " << total_images << " images, using " << cnt << " images (every " 
+       << downsampling_factor << "-th image)..." << endl;
+
   int ctr = 0;
+  int img_idx = 0;
   for (auto it = boost::filesystem::directory_iterator(path);
-      it != boost::filesystem::directory_iterator(); it++) {
-    if (!boost::filesystem::is_directory(it->path())) {  //we eliminate directories
+      it != boost::filesystem::directory_iterator(); it++, img_idx++) {
+    if (!boost::filesystem::is_directory(it->path()) && (img_idx % downsampling_factor) == 0) {
+      // std::cout << "img_idx: " << img_idx << " ctr: " << ctr << std::endl;
       std::cout << "\r " << int(double(ctr)/double(cnt)*100.0) << "%, processing "
-                << it->path().filename().string();
+                << it->path().filename().string() << " (image " << img_idx << ")";
       cv::Mat image = cv::imread(path + "/" + it->path().filename().string(), cv::IMREAD_GRAYSCALE);
       
       // Keypoints and descriptors
@@ -148,7 +165,8 @@ void loadFeatures(const string &path, vector<vector<vector<unsigned char> > > &f
       ctr++;
     }
   }
-  std::cout  << std::endl;
+  std::cout << std::endl;
+  std::cout << "Processed " << ctr << " images out of " << total_images << " total images" << std::endl;
 }
 
 // ----------------------------------------------------------------------------
@@ -172,8 +190,11 @@ void testVocCreation(const vector<vector<vector<unsigned char> > > &features)
 {
   // branching factor and depth levels 
   // Total no. of words = k^L = 10^6 = 1 million
-  const int k = 8; // 9
-  const int L = 3; // 3
+  // const int k = 8; // 9
+  // const int L = 3; // 3
+  const int k = 10;
+  const int L = 6;
+
   const WeightingType weight = TF_IDF;
   const ScoringType score = L1_NORM;
 
@@ -192,7 +213,7 @@ void testVocCreation(const vector<vector<vector<unsigned char> > > &features)
   for(size_t i = 0; i < TESTIMAGES; i++)
   {
     voc.transform(features[i], v1);
-    for(size_t j = 0; j < NIMAGES; j++)
+    for(size_t j = 0; j < TESTIMAGES; j++)
     {
       voc.transform(features[j], v2);
 
