@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.10)
 project(DBoW2)
 include(ExternalProject)
 
@@ -58,10 +58,18 @@ if(BUILD_Demo)
   file(COPY demo/images DESTINATION ${CMAKE_BINARY_DIR}/)
 endif(BUILD_Demo)
 
+# Help CMake find Boost installed via Homebrew on macOS
+if(APPLE)
+  set(BOOST_ROOT "/usr/local/Cellar/boost/1.89.0")
+  set(Boost_NO_SYSTEM_PATHS TRUE)
+  set(Boost_DIR "${BOOST_ROOT}/lib/cmake/Boost-1.89.0")
+endif()
+
 # Add BRISK training executable
 add_executable(trainBRISK src/trainBRISK.cpp)
-find_package(Boost COMPONENTS filesystem system REQUIRED)
-target_link_libraries(trainBRISK ${PROJECT_NAME} ${OpenCV_LIBS} brisk Boost::filesystem Boost::system)
+set(Boost_NO_BOOST_CMAKE ON)
+find_package(Boost COMPONENTS filesystem REQUIRED)
+target_link_libraries(trainBRISK ${PROJECT_NAME} ${OpenCV_LIBS} brisk Boost::filesystem)
 target_include_directories(trainBRISK PRIVATE 
   include/DBoW2/ 
   include/
@@ -72,8 +80,8 @@ set_target_properties(trainBRISK PROPERTIES CXX_STANDARD 11)
 
 # Add BRISK loading executable
 add_executable(loadBRISK src/loadBRISK.cpp)
-find_package(Boost COMPONENTS filesystem system REQUIRED)
-target_link_libraries(loadBRISK ${PROJECT_NAME} ${OpenCV_LIBS} brisk Boost::filesystem Boost::system)
+find_package(Boost COMPONENTS filesystem REQUIRED)
+target_link_libraries(loadBRISK ${PROJECT_NAME} ${OpenCV_LIBS} brisk Boost::filesystem)
 target_include_directories(loadBRISK PRIVATE 
   include/DBoW2/ 
   include/
