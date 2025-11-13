@@ -27,6 +27,10 @@
 // Boost filesystem (used below for directory iteration)
 #include <boost/filesystem.hpp>
 
+// Timing
+#include <chrono>
+#include <iomanip>
+
 using namespace DBoW2;
 using namespace std;
 
@@ -70,7 +74,7 @@ void testDatabase(const vector<vector<vector<unsigned char> > > &features);
 const int NIMAGES = 4; ///< number of training images
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-const int TESTIMAGES = 5; ///< number of test images
+const int TESTIMAGES = 10; ///< number of test images
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 /// \brief Main
@@ -114,6 +118,12 @@ void loadFeatures(const string &path, vector<vector<vector<unsigned char> > > &f
   features.clear();
   features.reserve(NIMAGES);
   // Reserve capacity after counting files below
+
+  // Thresholding parameters for BRISK
+  double uniformityRadius = 36;
+  size_t octaves = 1;
+  double absoluteThreshold = 100;
+  size_t maxNumKpt = 800; // Maximum # of keypoints per image
 
   brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator> briskDetector(36, 0, 100,700);
   brisk::BriskDescriptorExtractor briskDescriptorExtractor(false, false);
@@ -172,16 +182,25 @@ void testVocCreation(const vector<vector<vector<unsigned char> > > &features)
 {
   // branching factor and depth levels 
   // Total no. of words = k^L = 10^6 = 1 million
-  const int k = 8; // 9
-  const int L = 3; // 3
+  const int k = 10; // 9
+  const int L = 5; // 3
   const WeightingType weight = TF_IDF;
   const ScoringType score = L1_NORM;
 
   FBriskVocabulary voc(k, L, weight, score);
 
-  cout << "Creating a small " << k << "^" << L << " vocabulary..." << endl;
+  cout << "Creating a " << k << "^" << L << " vocabulary..." << endl;
+  auto start = std::chrono::high_resolution_clock::now();
   voc.create(features);
-  cout << "... done!" << endl;
+  auto end = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+  const auto total_ms = duration.count();
+  const auto minutes = total_ms / 60000;
+  const double seconds_rem = (total_ms % 60000) / 1000.0;
+  cout << "... done! Training took " << total_ms << " ms ("
+    << fixed << setprecision(3) << (total_ms / 1000.0) << " s, "
+    << minutes << " min " << setprecision(3) << seconds_rem << " s)" << endl;
+  cout.unsetf(ios::fixed);
 
   cout << "Vocabulary information: " << endl
   << voc << endl << endl;
@@ -192,7 +211,7 @@ void testVocCreation(const vector<vector<vector<unsigned char> > > &features)
   for(size_t i = 0; i < TESTIMAGES; i++)
   {
     voc.transform(features[i], v1);
-    for(size_t j = 0; j < NIMAGES; j++)
+    for(size_t j = 0; j < TESTIMAGES; j++)
     {
       voc.transform(features[j], v2);
 
@@ -239,7 +258,7 @@ void testDatabase(const vector<vector<vector<unsigned char> > > &features)
   QueryResults ret;
   for(size_t i = 0; i < TESTIMAGES; i++)
   {
-    db.query(features[i], ret, 4);
+    db.query(features[i], ret, -1); // max 10 results
 
     // ret[0] is always the same image in this case, because we added it to the
     // database. ret[1] is the second best match.

@@ -91,6 +91,57 @@ target_include_directories(fastLoadBRISK PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/brisk/include)
 set_target_properties(fastLoadBRISK PROPERTIES CXX_STANDARD 11)
 
+# Add vocabulary format converter (YAML to binary/XML)
+add_executable(convertVocToBinary src/convertVocToBinary.cpp)
+target_link_libraries(convertVocToBinary ${PROJECT_NAME} ${OpenCV_LIBS})
+target_include_directories(convertVocToBinary PRIVATE 
+  include/DBoW2/ 
+  include/
+  3rdparty/brisk/include
+  ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/brisk/include)
+set_target_properties(convertVocToBinary PROPERTIES CXX_STANDARD 11)
+
+# Add vocabulary loading benchmark tool
+add_executable(benchmarkVocLoad src/benchmarkVocLoad.cpp)
+target_link_libraries(benchmarkVocLoad ${PROJECT_NAME} ${OpenCV_LIBS})
+target_include_directories(benchmarkVocLoad PRIVATE 
+  include/DBoW2/ 
+  include/
+  3rdparty/brisk/include
+  ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/brisk/include)
+set_target_properties(benchmarkVocLoad PROPERTIES CXX_STANDARD 11)
+
+# Add uncompressed vocabulary saver
+add_executable(saveToBinary src/saveToBinary.cpp)
+target_link_libraries(saveToBinary ${PROJECT_NAME} ${OpenCV_LIBS})
+target_include_directories(saveToBinary PRIVATE 
+  include/DBoW2/ 
+  include/
+  3rdparty/brisk/include
+  ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/brisk/include)
+set_target_properties(saveToBinary PROPERTIES CXX_STANDARD 11)
+
+# Add parallel vocabulary loader (experimental)
+find_package(Threads REQUIRED)
+add_executable(parallelLoadVocab src/parallelLoadVocab.cpp)
+target_link_libraries(parallelLoadVocab ${PROJECT_NAME} ${OpenCV_LIBS} Threads::Threads)
+target_include_directories(parallelLoadVocab PRIVATE 
+  include/DBoW2/ 
+  include/
+  3rdparty/brisk/include
+  ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/brisk/include)
+set_target_properties(parallelLoadVocab PROPERTIES CXX_STANDARD 11)
+
+# Add parallel loading benchmark
+add_executable(benchmarkParallelLoad src/benchmarkParallelLoad.cpp)
+target_link_libraries(benchmarkParallelLoad ${PROJECT_NAME} ${OpenCV_LIBS} Threads::Threads)
+target_include_directories(benchmarkParallelLoad PRIVATE 
+  include/DBoW2/ 
+  include/
+  3rdparty/brisk/include
+  ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/brisk/include)
+set_target_properties(benchmarkParallelLoad PROPERTIES CXX_STANDARD 11)
+
 
 configure_file(src/DBoW2.cmake.in
   "${PROJECT_BINARY_DIR}/DBoW2Config.cmake" @ONLY)
