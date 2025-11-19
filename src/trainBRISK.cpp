@@ -115,7 +115,12 @@ void loadFeatures(const string &path, vector<vector<vector<unsigned char> > > &f
   features.reserve(NIMAGES);
   // Reserve capacity after counting files below
 
-  brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator> briskDetector(36, 0, 100,700);
+  size_t uniformityRadius = 36;
+  size_t octaves = 1;
+  double absoluteThreshold = 100;
+  size_t maxNumKpt = 700;
+
+  brisk::ScaleSpaceFeatureDetector<brisk::HarrisScoreCalculator> briskDetector(uniformityRadius, octaves, absoluteThreshold, maxNumKpt);
   brisk::BriskDescriptorExtractor briskDescriptorExtractor(false, false);
 
   size_t cnt = size_t(std::count_if(
@@ -172,8 +177,8 @@ void testVocCreation(const vector<vector<vector<unsigned char> > > &features)
 {
   // branching factor and depth levels 
   // Total no. of words = k^L = 10^6 = 1 million
-  const int k = 8; // 9
-  const int L = 3; // 3
+  const int k = 10; // 9
+  const int L = 6; // 3
   const WeightingType weight = TF_IDF;
   const ScoringType score = L1_NORM;
 

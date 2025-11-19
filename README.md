@@ -142,6 +142,61 @@ Notes:
   a small similarity matrix for the first few images.
 - The small database is saved and reloaded to validate persistence.
 
+#### 5) Two-step vocabulary training (save descriptors, then train)
+
+For large datasets or repeated vocabulary training experiments, you can separate feature extraction from vocabulary training:
+
+##### Step 1: Extract and save BRISK descriptors
+
+```bash
+./saveBRISKDescriptors <dataset-folder> [output-file]
+```
+
+- `<dataset-folder>`: directory containing your images
+- `[output-file]` (optional): output `.yml.gz` file for descriptors (default: `brisk_descriptors.yml.gz`)
+
+Examples:
+
+```bash
+# Extract descriptors from dataset and save to default file
+./saveBRISKDescriptors /data/Caves_indexed caves_descriptors.yml.gz
+```
+
+This extracts BRISK features from all images and saves them to a compressed file. The saved file includes:
+- Number of images
+- Descriptor type (BRISK)
+- Descriptor size
+- All descriptors for each image
+
+##### Step 2: Train vocabulary from saved descriptors
+
+```bash
+./trainFromDescriptors <descriptors.yml.gz> [base-name]
+```
+
+- `<descriptors.yml.gz>`: input file with pre-extracted descriptors (created by `saveBRISKDescriptors`)
+- `[base-name]` (optional): base name for output files
+  - Vocabulary: `<base-name>_voc.yml.gz`
+  - Database:   `<base-name>_db.yml.gz`
+  - If omitted, defaults are: `small_voc.yml.gz` and `small_db.yml.gz`
+
+Examples:
+
+```bash
+# Train vocabulary from saved descriptors with default output names
+./trainFromDescriptors brisk_descriptors.yml.gz
+
+# Train vocabulary with custom output names
+./trainFromDescriptors demo_descriptors.yml.gz demo
+```
+
+This approach is beneficial when:
+- You want to experiment with different vocabulary parameters (k, L) without re-extracting features
+- You're working with large datasets where feature extraction is time-consuming
+- You need to train multiple vocabularies from the same image set
+
+The vocabulary configuration (k=10, L=6) creates a vocabulary with 10^6 = 1 million words. You can modify these parameters in the source code if needed.
+
 #### Troubleshooting
 
 - Missing submodules: `git submodule update --init --recursive`

@@ -69,6 +69,25 @@ target_include_directories(trainBRISK PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/brisk/include)
 set_target_properties(trainBRISK PROPERTIES CXX_STANDARD 11)
 
+# Add BRISK descriptor saver executable
+add_executable(saveBRISKDescriptors src/saveBRISKDescriptors.cpp)
+target_link_libraries(saveBRISKDescriptors ${OpenCV_LIBS} brisk Boost::filesystem Boost::system)
+target_include_directories(saveBRISKDescriptors PRIVATE 
+  include/DBoW2/ 
+  include/
+  3rdparty/brisk/include
+  ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/brisk/include)
+set_target_properties(saveBRISKDescriptors PROPERTIES CXX_STANDARD 11)
+
+# Add vocabulary trainer from pre-extracted descriptors
+add_executable(trainFromDescriptors src/trainFromDescriptors.cpp)
+target_link_libraries(trainFromDescriptors ${PROJECT_NAME} ${OpenCV_LIBS})
+target_include_directories(trainFromDescriptors PRIVATE 
+  include/DBoW2/ 
+  include/
+  3rdparty/brisk/include
+  ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/brisk/include)
+set_target_properties(trainFromDescriptors PROPERTIES CXX_STANDARD 11)
 
 # Add BRISK loading executable
 add_executable(loadBRISK src/loadBRISK.cpp)
